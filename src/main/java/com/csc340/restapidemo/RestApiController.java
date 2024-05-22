@@ -1,153 +1,105 @@
 package com.csc340.restapidemo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonView;
+import org.json.simple.parser.ParseException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @RestController
 public class RestApiController {
+    Map<Integer, Student> studentDatabase = new StudentDatabase().getStudentMap();
 
-    Map<Integer, Student> studentDatabase = new HashMap<>();
-
-    /**
-     * Hello World API endpoint.
-     *
-     * @return response string.
-     */
-    @GetMapping("/hello")
-    public String hello() {
-        return "Hello, World!";
+    public RestApiController() throws IOException, ParseException {
     }
 
-    /**
-     * Greeting API endpoint.
-     *
-     * @param name the request parameter
-     * @return the response string.
-     */
-    @GetMapping("/greeting")
-    public String greeting(@RequestParam(value = "name", defaultValue = "Dora") String name) {
-        return "Hola, soy " + name;
-    }
-
-
-    /**
-     * List all students.
-     *
-     * @return the list of students.
-     */
-    @GetMapping("students/all")
-    public Object getAllStudents() {
-        if (studentDatabase.isEmpty()) {
-            studentDatabase.put(1, new Student(1, "sample1", "csc", 3.86));
-        }
-        return studentDatabase.values();
-    }
-
-    /**
-     * Get one student by Id
-     *
-     * @param id the unique student id.
-     * @return the student.
-     */
-    @GetMapping("students/{id}")
-    public Student getStudentById(@PathVariable int id) {
+    @JsonView(Views.Public.class)
+    @GetMapping("/students/{id}")
+    public Student getStudentByID(@PathVariable int id) throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
         return studentDatabase.get(id);
     }
 
+    @JsonView(Views.Public.class)
+    @GetMapping("/students/all")
+    public Object getAllStudents() throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
+        if (studentDatabase.isEmpty()) {
+            studentDatabase.put(1, new Student(1, "sample", "csc", 3.86));
+        }
+        return studentDatabase.values();
+    }
 
-    /**
-     * Create a new Student entry.
-     *
-     * @param student the new Student
-     * @return the List of Students.
-     */
-    @PostMapping("students/create")
-    public Object createStudent(@RequestBody Student student) {
+    @JsonView(Views.Public.class)
+    @PostMapping("/students/create")
+    public Object createStudent(@RequestBody Student student) throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
         studentDatabase.put(student.getId(), student);
+        StudentDatabase.writeNewDatabase(studentDatabase);
+        studentDatabase = new StudentDatabase().getStudentMap();
         return studentDatabase.values();
     }
 
-    /**
-     * Delete a Student by id
-     *
-     * @param id the id of student to be deleted.
-     * @return the List of Students.
-     */
-    @DeleteMapping("students/delete/{id}")
-    public Object deleteStudent(@PathVariable int id) {
+    @JsonView(Views.Public.class)
+    @GetMapping("/students/update/{id}")
+    public Object updateStudent(@PathVariable int id, @RequestBody Student student) throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
+        studentDatabase.replace(id, student);
+        StudentDatabase.writeNewDatabase(studentDatabase);
+        studentDatabase = new StudentDatabase().getStudentMap();
+        return studentDatabase.values();
+    }
+
+    @JsonView(Views.Public.class)
+    @GetMapping("/students/delete/{id}")
+    public Object deleteStudentByID(@PathVariable int id) throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
         studentDatabase.remove(id);
+        StudentDatabase.writeNewDatabase(studentDatabase);
+        studentDatabase = new StudentDatabase().getStudentMap();
         return studentDatabase.values();
     }
 
-    /**
-     * Get a quote from quotable and make it available our own API endpoint
-     *
-     * @return The quote json response
-     */
-    @GetMapping("/quote")
-    public Object getQuote() {
-        try {
-            String url = "https://api.quotable.io/random";
-            RestTemplate restTemplate = new RestTemplate();
-            ObjectMapper mapper = new ObjectMapper();
-
-            //We are expecting a String object as a response from the above API.
-            String jSonQuote = restTemplate.getForObject(url, String.class);
-            JsonNode root = mapper.readTree(jSonQuote);
-
-            //Parse out the most important info from the response and use it for whatever you want. In this case, just print.
-            String quoteAuthor = root.get("author").asText();
-            String quoteContent = root.get("content").asText();
-            System.out.println("Author: " + quoteAuthor);
-            System.out.println("Quote: " + quoteContent);
-
-            return root;
-
-        } catch (JsonProcessingException ex) {
-            Logger.getLogger(RestApiController.class.getName()).log(Level.SEVERE,
-                    null, ex);
-            return "error in /quote";
-        }
+    @GetMapping("/students/test")
+    public String test() throws IOException, ParseException {
+        studentDatabase = new StudentDatabase().getStudentMap();
+        return studentDatabase.get(1).toString();
     }
 
-    /**
-     * Get a list of universities from hipolabs and make them available at our own API
-     * endpoint.
-     *
-     * @return json array
-     */
-    @GetMapping("/univ")
-    public Object getUniversities() {
-        try {
-            String url = "http://universities.hipolabs.com/search?name=sports";
-            RestTemplate restTemplate = new RestTemplate();
-            ObjectMapper mapper = new ObjectMapper();
-
-            String jsonListResponse = restTemplate.getForObject(url, String.class);
-            JsonNode root = mapper.readTree(jsonListResponse);
-
-            //The response from the above API is a JSON Array, which we loop through.
-            for (JsonNode rt : root) {
-                //Extract relevant info from the response and use it for what you want, in this case just print to the console.
-                String name = rt.get("name").asText();
-                String country = rt.get("country").asText();
-                System.out.println(name + ": " + country);
-            }
-
-            return root;
-        } catch (JsonProcessingException ex) {
-            Logger.getLogger(RestApiController.class.getName()).log(Level.SEVERE,
-                    null, ex);
-            return "error in /univ";
+    @GetMapping("/artworks")
+    public Object thirdPartyAPITest() throws IOException {
+        URL url = new URL("https://api.artic.edu/api/v1/artworks");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
+        con.connect();
+        int response = con.getResponseCode();
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(con.getInputStream()));
+        String inputLine;
+        StringBuffer content = new StringBuffer();
+        while ((inputLine = in.readLine()) != null) {
+            content.append(inputLine);
         }
+        in.close();
+        con.disconnect();
+        return content.toString();
+    }
 
+    private String formatStudentsOutput(Map<Integer, Student> database) {
+        Iterator iter = database.entrySet().iterator();
+        String output = "<ul><li>";
+        while (iter.hasNext()) {
+            output = output + iter.next().toString() + "</li><li>";
+        }
+        output += "</ul>";
+        return output;
     }
 }

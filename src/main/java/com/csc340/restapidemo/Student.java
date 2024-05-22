@@ -1,12 +1,17 @@
 package com.csc340.restapidemo;
 
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
+
 public class Student {
-
+    @JsonView(Views.Public.class)
     private int id;
-    private  String name;
-
+    @JsonView(Views.Public.class)
+    private String name;
+    @JsonView(Views.Public.class)
     private String major;
-
+    @JsonView(Views.Public.class)
     private double gpa;
 
     public Student(int id, String name, String major, double gpa) {
@@ -17,34 +22,13 @@ public class Student {
     }
 
     public int getId() {
-        return id;
+        return this.id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getMajor() {
-        return major;
-    }
-
-    public void setMajor(String major) {
-        this.major = major;
-    }
-
-    public double getGpa() {
-        return gpa;
-    }
-
-    public void setGpa(double gpa) {
-        this.gpa = gpa;
+    @Override
+    public String toString() {
+        String out = "ID: " + this.id + ", Name: " + this.name + ", Major: " + this.major + ", GPA: " + this.gpa;
+        return out;
     }
 }
+
